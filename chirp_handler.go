@@ -19,7 +19,7 @@ type Chirp struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
-func (cfg *apiConfig) create_chirp_Handler(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body   string    `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
@@ -81,4 +81,58 @@ func cleanString(body string, blocked map[string]struct{}) string {
 	}
 
 	return strings.Join(check, " ")
+}
+
+func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
+	chirps, err := cfg.db.GetChirps(r.Context())
+	if err != nil {
+		respondWithError(w, 500, "error getting chirps from db", err)
+		return
+	}
+
+	jsonChirps := make([]Chirp, len(chirps))
+	for i, c := range chirps {
+		jsonChirps[i] = Chirp{
+			ID:        c.ID,
+			CreatedAt: c.CreatedAt,
+			UpdatedAt: c.UpdatedAt,
+			Body:      c.Body,
+			UserID:    c.UserID,
+		}
+	}
+
+	respondWithJSON(w, http.StatusOK, jsonChirps)
+}
+
+func (cfg *apiConfig) getChirpByIDHandler(w http.ResponseWriter, r *http.Request) {
+	chirpID := r.PathValue("chirpID")
+
+	err := uuid.Validate(chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid uuid in request", err)
+		return
+	}
+
+	chirpUUID, err := uuid.Parse(chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "error converting id to uuid", err)
+		return
+	}
+
+	c, err := cfg.db.GetChirpById(context.Background(), chirpUUID)
+	if err != nil {
+		respondWithError(w, 404, "Chirp with requested id does not exist", err)
+		return
+	}
+
+	jsonChirp := Chirp{
+		ID:        c.ID,
+		CreatedAt: c.CreatedAt,
+		UpdatedAt: c.UpdatedAt,
+		Body:      c.Body,
+		UserID:    c.UserID,
+	}
+
+	respondWithJSON(w, http.StatusOK, jsonChirp)
+
 }
