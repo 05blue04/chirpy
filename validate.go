@@ -17,40 +17,19 @@ func (cfg *apiConfig) validateHandler(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&c)
 	if err != nil {
 		log.Printf("Error decoding parameters: %s", err)
-		w.WriteHeader(500)
+		respondWithError(w, 400, "couldn't decode parameters", err)
 		return
 	}
 
 	if len(c.Body) > 140 {
-		dat, err := json.Marshal(struct {
-			Error string `json:"error"`
-		}{
-			Error: "Chirp is too long",
-		})
-		if err != nil {
-			log.Printf("Error marshalling JSON: %s", err)
-			w.WriteHeader(500)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(400)
-		w.Write(dat)
+		respondWithError(w, 400, "Chirp is too long", nil)
 		return
 	}
 
-	dat, err := json.Marshal(struct {
+	respondWithJSON(w, http.StatusOK, struct {
 		Valid bool `json:"valid"`
 	}{
 		Valid: true,
 	})
 
-	if err != nil {
-		log.Printf("Error marshalling JSON: %s", err)
-		w.WriteHeader(500)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	w.Write(dat)
 }
