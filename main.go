@@ -15,6 +15,7 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
+	platform       string
 }
 
 func main() {
@@ -31,7 +32,8 @@ func main() {
 		log.Fatalf("Couldnt connect to database: %v", err)
 	}
 	cfg := apiConfig{
-		db: database.New(db),
+		db:       database.New(db),
+		platform: os.Getenv("PLATFORM"),
 	}
 
 	handler := http.StripPrefix("/app/", http.FileServer(http.Dir(".")))
@@ -42,6 +44,7 @@ func main() {
 	mux.HandleFunc("GET /admin/metrics", cfg.metricHandler)
 	mux.HandleFunc("POST /admin/reset", cfg.resetHandler)
 	mux.HandleFunc("POST /api/validate_chirp", cfg.validateHandler)
+	mux.HandleFunc("POST /api/users", cfg.usersHandler)
 
 	server := &http.Server{
 		Handler: mux,
