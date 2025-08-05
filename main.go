@@ -1,19 +1,38 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
+	"os"
 	"sync/atomic"
+
+	"github.com/05blue04/chirpy/internal/database"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
+	db             *database.Queries
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("error loading environment variables")
+	}
+
 	const port = "8080"
 	mux := http.NewServeMux()
-	cfg := apiConfig{}
+
+	db, err := sql.Open("postgres", os.Getenv("DB_URL"))
+	if err != nil {
+		log.Fatalf("Couldnt connect to database: %v", err)
+	}
+	cfg := apiConfig{
+		db: database.New(db),
+	}
 
 	handler := http.StripPrefix("/app/", http.FileServer(http.Dir(".")))
 
@@ -29,7 +48,7 @@ func main() {
 		Addr:    ":" + port,
 	}
 
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
 	}
