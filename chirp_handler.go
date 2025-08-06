@@ -125,14 +125,12 @@ func (cfg *apiConfig) getChirpByIDHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	jsonChirp := Chirp{
+	respondWithJSON(w, http.StatusOK, Chirp{
 		ID:        c.ID,
 		CreatedAt: c.CreatedAt,
 		UpdatedAt: c.UpdatedAt,
 		Body:      c.Body,
 		UserID:    c.UserID,
-	}
-
-	respondWithJSON(w, http.StatusOK, jsonChirp)
+	})
 
 }
