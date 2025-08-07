@@ -33,9 +33,10 @@ func main() {
 		log.Fatalf("Couldnt connect to database: %v", err)
 	}
 	cfg := apiConfig{
-		db:       database.New(db),
-		platform: os.Getenv("PLATFORM"),
-		secret:   os.Getenv("JWT_SECRET"),
+		fileserverHits: atomic.Int32{},
+		db:             database.New(db),
+		platform:       os.Getenv("PLATFORM"),
+		secret:         os.Getenv("JWT_SECRET"),
 	}
 
 	handler := http.StripPrefix("/app/", http.FileServer(http.Dir(".")))
@@ -48,6 +49,8 @@ func main() {
 	//users
 	mux.HandleFunc("POST /api/users", cfg.usersHandler)
 	mux.HandleFunc("POST /api/login", cfg.loginHandler)
+	mux.HandleFunc("POST /api/refresh", cfg.refreshHandler)
+	mux.HandleFunc("POST /api/revoke", cfg.revokeHandler)
 	//chirps
 	mux.HandleFunc("POST /api/chirps", cfg.createChirpHandler)
 	mux.HandleFunc("GET /api/chirps", cfg.getChirpsHandler)
