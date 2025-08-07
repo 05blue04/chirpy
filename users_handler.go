@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -72,11 +73,12 @@ func (cfg *apiConfig) loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type response struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Email     string    `json:"email"`
-		Token     string    `json:"token"`
+		ID           uuid.UUID `json:"id"`
+		CreatedAt    time.Time `json:"created_at"`
+		UpdatedAt    time.Time `json:"updated_at"`
+		Email        string    `json:"email"`
+		Token        string    `json:"token"`
+		RefreshToken string    `json:"refresh_token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -101,21 +103,36 @@ func (cfg *apiConfig) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if params.Expires_in_seconds == 0 || params.Expires_in_seconds > 60*60 {
-		params.Expires_in_seconds = 60 * 60
-	}
-
-	token, err := auth.MakeJWT(u.ID, cfg.secret, time.Duration(params.Expires_in_seconds)*time.Second)
+	token, err := auth.MakeJWT(u.ID, cfg.secret, time.Hour)
 	if err != nil {
 		respondWithError(w, 500, "issues generating JWT token for user", err)
 		return
 	}
 
+	refreshToken := auth.MakeRefreshToken()
+
+	err = cfg.db.CreateToken(context.Background(), database.CreateTokenParams{
+		Token:     refreshToken,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID:    u.ID,
+		ExpiresAt: time.Now().Add(24 * time.Hour * 60),
+		RevokedAt: sql.NullTime{
+			Valid: false,
+		},
+	})
+
+	if err != nil {
+		respondWithError(w, 500, "issue generating Refresh token", err)
+		return
+	}
+
 	respondWithJSON(w, http.StatusOK, response{
-		ID:        u.ID,
-		CreatedAt: u.CreatedAt,
-		UpdatedAt: u.UpdatedAt,
-		Email:     u.Email,
-		Token:     token,
+		ID:           u.ID,
+		CreatedAt:    u.CreatedAt,
+		UpdatedAt:    u.UpdatedAt,
+		Email:        u.Email,
+		Token:        token,
+		RefreshToken: refreshToken,
 	})
 }
