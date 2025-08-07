@@ -167,9 +167,19 @@ Authorization: Bearer <jwt_token>
 - Profanity filter: The words "kerfuffle", "sharbert", and "fornax" will be replaced with "****"
 
 ### Get All Chirps
-Retrieve all chirps.
+Retrieve all chirps with optional filtering and sorting.
 
 **Endpoint:** `GET /api/chirps`
+
+**Query Parameters:**
+- `author_id` (optional): UUID - Filter chirps by specific author
+- `sort` (optional): `asc` | `desc` - Sort by creation date (default: ascending)
+
+**Examples:**
+- `GET /api/chirps` - All chirps, ascending order
+- `GET /api/chirps?sort=desc` - All chirps, descending order (newest first)
+- `GET /api/chirps?author_id=550e8400-e29b-41d4-a716-446655440000` - Chirps by specific author
+- `GET /api/chirps?author_id=550e8400-e29b-41d4-a716-446655440000&sort=desc` - Author's chirps, newest first
 
 **Response:** `200 OK`
 ```json

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -96,10 +97,37 @@ func cleanString(body string, blocked map[string]struct{}) string {
 }
 
 func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
-	chirps, err := cfg.db.GetChirps(r.Context())
-	if err != nil {
-		respondWithError(w, 500, "error getting chirps from db", err)
-		return
+
+	var chirps []database.Chirp
+	var err error
+
+	authIDStr := r.URL.Query().Get("author_id")
+	sortParam := r.URL.Query().Get("sort")
+	if authIDStr != "" {
+		err := uuid.Validate(authIDStr)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "invalid author_id uuid", err)
+			return
+		}
+
+		authID, err := uuid.Parse(authIDStr)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "error parsing author_id", err)
+			return
+		}
+
+		chirps, err = cfg.db.GetChirpsByAuthID(r.Context(), authID)
+		if err != nil {
+			respondWithError(w, 500, "error getting chirps by authID", err)
+			return
+		}
+
+	} else {
+		chirps, err = cfg.db.GetChirps(r.Context())
+		if err != nil {
+			respondWithError(w, 500, "error getting chirps from db", err)
+			return
+		}
 	}
 
 	jsonChirps := make([]Chirp, len(chirps))
@@ -111,6 +139,12 @@ func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
 			Body:      c.Body,
 			UserID:    c.UserID,
 		}
+	}
+
+	if sortParam == "desc" {
+		sort.Slice(jsonChirps, func(i, j int) bool {
+			return jsonChirps[i].CreatedAt.After(jsonChirps[j].CreatedAt)
+		})
 	}
 
 	respondWithJSON(w, http.StatusOK, jsonChirps)
