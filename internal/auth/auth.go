@@ -1,6 +1,10 @@
 package auth
 
 import (
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -28,7 +32,7 @@ func CheckPasswordHash(password, hash string) error {
 
 func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
 	claims := &jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)),
+		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(expiresIn)),
 		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 		Issuer:    "chirpy",
 		Subject:   userID.String(),
@@ -45,8 +49,8 @@ func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (str
 }
 
 func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
-	claims := &jwt.RegisteredClaims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
+	claims := jwt.RegisteredClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (any, error) {
 		return []byte(tokenSecret), nil
 	})
 
@@ -63,11 +67,31 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 		return uuid.Nil, err
 	}
 
-	userUUID, err := uuid.Parse(userID)
+	issuer, err := token.Claims.GetIssuer()
 	if err != nil {
 		return uuid.Nil, err
+	}
+	if issuer != "chirpy" {
+		return uuid.Nil, errors.New("invalid issuer")
+	}
+
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid user ID: %w", err)
 	}
 
 	return userUUID, nil
 
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	bearerToken := headers.Get("Authorization")
+
+	if bearerToken == "" {
+		return "", fmt.Errorf("no bearer token present in header")
+	}
+
+	token := strings.TrimSpace(strings.Replace(bearerToken, "Bearer", "", 1))
+
+	return token, nil
 }

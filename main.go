@@ -16,6 +16,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	platform       string
+	secret         string
 }
 
 func main() {
@@ -34,6 +35,7 @@ func main() {
 	cfg := apiConfig{
 		db:       database.New(db),
 		platform: os.Getenv("PLATFORM"),
+		secret:   os.Getenv("JWT_SECRET"),
 	}
 
 	handler := http.StripPrefix("/app/", http.FileServer(http.Dir(".")))

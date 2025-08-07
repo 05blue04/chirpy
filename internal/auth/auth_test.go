@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -106,5 +107,20 @@ func TestValidateJWT(t *testing.T) {
 				t.Errorf("ValidateJWT() gotUserID = %v, want %v", gotUserID, tt.wantUserID)
 			}
 		})
+	}
+}
+
+func TestGetBearerToken(t *testing.T) {
+	header := http.Header{}
+	header.Add("Authorization", "Bearer eyxtoken")
+
+	token, err := GetBearerToken(header)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	expected := "eyxtoken"
+	if token != expected {
+		t.Errorf("expected token %q, got %q", expected, token)
 	}
 }
