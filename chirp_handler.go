@@ -27,7 +27,7 @@ func (cfg *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request)
 
 	token, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "error extracting bearer from request", err)
+		respondWithError(w, http.StatusUnauthorized, "error extracting bearer from request", err)
 		return
 	}
 

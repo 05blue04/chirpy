@@ -136,3 +136,55 @@ func (cfg *apiConfig) loginHandler(w http.ResponseWriter, r *http.Request) {
 		RefreshToken: refreshToken,
 	})
 }
+
+func (cfg *apiConfig) updateUserHandler(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "error extracting bearer from request", err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, cfg.secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "unable to grant access", err)
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+
+	err = decoder.Decode(&params)
+	if err != nil {
+		respondWithError(w, 400, "Error decoding body", err)
+		return
+	}
+
+	hash, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respondWithError(w, 400, "error creating password hash", err)
+		return
+	}
+
+	u, err := cfg.db.UpdateUser(context.Background(), database.UpdateUserParams{
+		HashedPassword: hash,
+		Email:          params.Email,
+		ID:             userID,
+	})
+	if err != nil {
+		respondWithError(w, 400, "Error updating user data", err)
+		return
+	}
+
+	respondWithJSON(w, 200, User{
+		ID:        userID,
+		CreatedAt: u.CreatedAt,
+		UpdatedAt: u.UpdatedAt,
+		Email:     u.Email,
+	})
+
+}
