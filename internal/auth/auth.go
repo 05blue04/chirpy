@@ -106,3 +106,16 @@ func MakeRefreshToken() string {
 
 	return hexKey
 }
+
+func GetAPIKey(headers http.Header) (string, error) {
+
+	apiKey := headers.Get("Authorization")
+
+	if apiKey == "" {
+		return "", fmt.Errorf("no apiKey present in header")
+	}
+
+	cleanKey := strings.TrimSpace(strings.Replace(apiKey, "ApiKey", "", 1))
+
+	return cleanKey, nil
+}

@@ -202,10 +202,20 @@ func (cfg *apiConfig) polkaHandler(w http.ResponseWriter, r *http.Request) {
 		} `json:"data"`
 	}
 
+	key, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "apiKey doesn't match", err)
+		return
+	}
+
+	if key != cfg.apiKey {
+		respondWithError(w, http.StatusUnauthorized, "apiKey doesn't match", err)
+		return
+	}
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
 
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		log.Printf("Error decoding parameters: %s", err)
 		respondWithError(w, 400, "couldn't decode parameters", err)

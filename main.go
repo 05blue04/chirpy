@@ -17,6 +17,7 @@ type apiConfig struct {
 	db             *database.Queries
 	platform       string
 	secret         string
+	apiKey         string
 }
 
 func main() {
@@ -37,6 +38,7 @@ func main() {
 		db:             database.New(db),
 		platform:       os.Getenv("PLATFORM"),
 		secret:         os.Getenv("JWT_SECRET"),
+		apiKey:         os.Getenv("POLKA_KEY"),
 	}
 
 	handler := http.StripPrefix("/app/", http.FileServer(http.Dir(".")))
